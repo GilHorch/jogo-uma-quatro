@@ -1,12 +1,18 @@
 <!DOCTYPE html>
 <html lang="pt">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jogo da Memória</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; }
+        /* Estilo básico da página */
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
 
+        /* Área do jogo */
         .game-board {
             display: flex;
             flex-direction: column;
@@ -14,11 +20,14 @@
             gap: 20px;
         }
 
-        .top-card, .bottom-cards {
+        /* Cartas do topo e base */
+        .top-card,
+        .bottom-cards {
             display: flex;
             gap: 10px;
         }
 
+        /* Estilo individual das cartas */
         .card {
             width: 100px;
             height: 100px;
@@ -28,27 +37,55 @@
             justify-content: center;
             cursor: pointer;
             border-radius: 8px;
-            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
             overflow: hidden;
         }
 
+        /* Imagem dentro da carta */
         .card img {
             width: 100%;
             height: 100%;
             object-fit: cover;
             border-radius: 8px;
         }
+
+        /* Tela final do jogo */
+        .final-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
     </style>
 </head>
+
 <body>
     <h1>Jogo da Memória</h1>
     <p>Tempo restante: <span id="timer">60</span> segundos</p>
     <p>Pontuação: <span id="score">0</span></p>
-    <div class="game-board">
+
+    <!-- Botão para tocar/parar a música -->
+    <button onclick="toggleMusic()">Tocar música</button>
+    <audio id="bgMusic" loop>
+        <source src="audio/musica1.mp3" type="audio/mpeg">
+        Seu navegador não suporta áudio HTML5.
+    </audio>
+
+    <!-- Área principal do jogo -->
+    <div class="game-board" id="gameBoard">
         <div class="top-card" id="topCard"></div>
         <div class="bottom-cards" id="bottomCards"></div>
     </div>
+
+    <!-- Tela exibida ao fim do jogo -->
+    <div class="final-screen" id="finalScreen">
+        <h2>Fim de Jogo!</h2>
+        <p>Sua pontuação final foi: <span id="finalScore"></span></p>
+        <button onclick="restartGame()">Jogar novamente</button>
+    </div>
+
     <script>
+        // Lista fixa de imagens com ID e caminho
         const images = [
             { id: 'img1', src: 'cao1.jpeg' },
             { id: 'img2', src: 'cao2.jpeg' },
@@ -57,25 +94,39 @@
             { id: 'img5', src: 'cao5.jpeg' }
         ];
 
-        let selectedCard = null;
-        let timeLeft = 60;
-        let score = 0;
+        // Variáveis globais de controle
+        let remainingImages = [...images]; // Cópia das imagens restantes
+        let timeLeft = 60; // Tempo inicial do jogo
+        let score = 0; // Pontuação inicial
+        let timerInterval; // Intervalo do cronômetro
+        let musicPlaying = false; // Estado da música
 
+        // Embaralha array de forma aleatória
         function shuffle(array) {
             return array.sort(() => Math.random() - 0.5);
         }
 
+        // Cria nova rodada do jogo
         function createBoard() {
             const topCardContainer = document.getElementById("topCard");
             const bottomCardsContainer = document.getElementById("bottomCards");
-            
+
+            // Limpa cartas anteriores
             topCardContainer.innerHTML = "";
             bottomCardsContainer.innerHTML = "";
-            
-            const shuffledImages = shuffle([...images]);
-            const topCard = shuffledImages[0];
-            const bottomOptions = shuffle([...shuffledImages.slice(1, 4), topCard]);
-            
+
+            // Se não houver mais imagens, encerra o jogo
+            if (remainingImages.length === 0) {
+                endGame();
+                return;
+            }
+
+            // Seleciona carta do topo e embaralha opções de baixo
+            const topCard = remainingImages.pop();
+            const distractors = shuffle(images.filter(img => img.id !== topCard.id)).slice(0, 3);
+            const bottomOptions = shuffle([...distractors, topCard]);
+
+            // Cria visual da carta do topo
             const topCardElement = document.createElement("div");
             topCardElement.classList.add("card");
             topCardElement.dataset.id = topCard.id;
@@ -84,6 +135,7 @@
             topCardElement.appendChild(topImage);
             topCardContainer.appendChild(topCardElement);
 
+            // Cria as cartas na parte inferior
             bottomOptions.forEach((imgObj) => {
                 const card = document.createElement("div");
                 card.classList.add("card");
@@ -91,39 +143,81 @@
                 const img = document.createElement("img");
                 img.src = imgObj.src;
                 card.appendChild(img);
+
+                // Evento de clique nas cartas
                 card.addEventListener("click", () => flipCard(card, topCard));
                 bottomCardsContainer.appendChild(card);
             });
         }
 
+        // Verifica se o clique foi correto
         function flipCard(card, topCard) {
             if (!card) return;
+
+            // Se o ID da carta for igual ao do topo, é acerto
             if (card.dataset.id === topCard.id) {
-                alert("Parabéns! Você encontrou a carta correspondente!");
-                score += 10;
+                score += 10; // Adiciona pontos
+                document.getElementById("score").textContent = score;
+                setTimeout(createBoard, 500); // Nova rodada
             } else {
                 alert("Errado! Tente novamente.");
-                score -= 2;
+                score -= 2; // Penalidade
+                document.getElementById("score").textContent = score;
             }
-            document.getElementById("score").textContent = score;
         }
 
+        // Inicia o cronômetro
         function startTimer() {
-            setInterval(() => {
+            timerInterval = setInterval(() => {
                 if (timeLeft > 0) {
                     timeLeft--;
                     document.getElementById("timer").textContent = timeLeft;
                 } else {
-                    alert("Tempo esgotado!");
-                    location.reload();
+                    clearInterval(timerInterval);
+                    endGame();
                 }
             }, 1000);
         }
 
+        // Exibe a tela de fim de jogo
+        function endGame() {
+            document.getElementById("gameBoard").style.display = "none";
+            document.getElementById("finalScreen").style.display = "flex";
+            document.getElementById("finalScore").textContent = score;
+        }
+
+        // Reinicia o jogo do zero
+        function restartGame() {
+            remainingImages = [...images];
+            score = 0;
+            timeLeft = 60;
+            document.getElementById("score").textContent = score;
+            document.getElementById("timer").textContent = timeLeft;
+            document.getElementById("finalScreen").style.display = "none";
+            document.getElementById("gameBoard").style.display = "flex";
+            clearInterval(timerInterval);
+            createBoard();
+            startTimer();
+        }
+
+        // Função para iniciar ou parar a música
+        function toggleMusic() {
+            const music = document.getElementById("bgMusic");
+            if (!musicPlaying) {
+                music.play();
+                musicPlaying = true;
+            } else {
+                music.pause();
+                musicPlaying = false;
+            }
+        }
+
+        // Inicializa o jogo ao carregar a página
         document.addEventListener("DOMContentLoaded", () => {
             createBoard();
             startTimer();
         });
     </script>
 </body>
+
 </html>

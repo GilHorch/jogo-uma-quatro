@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo da Memória</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+
+        .game-board {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .top-card, .bottom-cards {
+            display: flex;
+            gap: 10px;
+        }
+
+        .card {
+            width: 100px;
+            height: 100px;
+            background: #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Jogo da Memória</h1>
+    <p>Tempo restante: <span id="timer">60</span> segundos</p>
+    <p>Pontuação: <span id="score">0</span></p>
+    <div class="game-board">
+        <div class="top-card" id="topCard"></div>
+        <div class="bottom-cards" id="bottomCards"></div>
+    </div>
+    <script>
+        const images = [
+            { id: 'img1', src: 'cao1.jpeg' },
+            { id: 'img2', src: 'cao2.jpeg' },
+            { id: 'img3', src: 'cao3.jpeg' },
+            { id: 'img4', src: 'cao4.jpeg' },
+            { id: 'img5', src: 'cao5.jpeg' }
+        ];
+
+        let selectedCard = null;
+        let timeLeft = 60;
+        let score = 0;
+
+        function shuffle(array) {
+            return array.sort(() => Math.random() - 0.5);
+        }
+
+        function createBoard() {
+            const topCardContainer = document.getElementById("topCard");
+            const bottomCardsContainer = document.getElementById("bottomCards");
+            
+            topCardContainer.innerHTML = "";
+            bottomCardsContainer.innerHTML = "";
+            
+            const shuffledImages = shuffle([...images]);
+            const topCard = shuffledImages[0];
+            const bottomOptions = shuffle([...shuffledImages.slice(1, 4), topCard]);
+            
+            const topCardElement = document.createElement("div");
+            topCardElement.classList.add("card");
+            topCardElement.dataset.id = topCard.id;
+            const topImage = document.createElement("img");
+            topImage.src = topCard.src;
+            topCardElement.appendChild(topImage);
+            topCardContainer.appendChild(topCardElement);
+
+            bottomOptions.forEach((imgObj) => {
+                const card = document.createElement("div");
+                card.classList.add("card");
+                card.dataset.id = imgObj.id;
+                const img = document.createElement("img");
+                img.src = imgObj.src;
+                card.appendChild(img);
+                card.addEventListener("click", () => flipCard(card, topCard));
+                bottomCardsContainer.appendChild(card);
+            });
+        }
+
+        function flipCard(card, topCard) {
+            if (!card) return;
+            if (card.dataset.id === topCard.id) {
+                alert("Parabéns! Você encontrou a carta correspondente!");
+                score += 10;
+            } else {
+                alert("Errado! Tente novamente.");
+                score -= 2;
+            }
+            document.getElementById("score").textContent = score;
+        }
+
+        function startTimer() {
+            setInterval(() => {
+                if (timeLeft > 0) {
+                    timeLeft--;
+                    document.getElementById("timer").textContent = timeLeft;
+                } else {
+                    alert("Tempo esgotado!");
+                    location.reload();
+                }
+            }, 1000);
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            createBoard();
+            startTimer();
+        });
+    </script>
+</body>
+</html>
