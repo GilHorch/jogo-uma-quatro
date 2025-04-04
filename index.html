@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo da Memória</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+
+        .game-board { 
+            display: grid; 
+            grid-template-columns: repeat(5, 100px); 
+            gap: 10px; 
+            justify-content: center; 
+        }
+
+        .card { 
+            width: 100px; 
+            height: 100px; 
+            background: #eee; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer; 
+            position: relative; 
+            border-radius: 8px; 
+            box-shadow: 0 0 5px rgba(0,0,0,0.1); 
+            overflow: hidden; 
+        }
+
+        .card img { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; 
+            border-radius: 8px; 
+        }
+
+        .hidden { 
+            visibility: hidden; 
+        }
+    </style>
+</head>
+<body>
+    <h1>Jogo da Memória</h1>
+    <p>Tempo restante: <span id="timer">60</span> segundos</p>
+    <p>Pontuação: <span id="score">0</span></p>
+    <div class="game-board" id="gameBoard"></div>
+    <p><a href="/logout">Sair</a> | <a href="/historico.html">Ver Histórico</a></p>
+
+    <!-- Botão para trocar o áudio ambiente -->
+    <button onclick="trocarAudio()">Trocar Áudio</button>
+
+    <!-- Áudio ambiente com fonte dinâmica -->
+    <audio id="background-audio" autoplay loop>
+        <source id="audio-source" src="audio/foco.mp3" type="audio/mpeg">
+        Seu navegador não suporta áudio.
+    </audio>
+
+    <script>
+        // Lista com os caminhos dos arquivos de áudio disponíveis
+        const audios = ["audio/foco.mp3", "audio/suave.mp3"];
+        let audioIndex = 0; // Índice do áudio atual
+
+        // Função que troca o áudio tocando em loop
+        function trocarAudio() {
+            audioIndex = (audioIndex + 1) % audios.length; // Alterna entre os áudios disponíveis
+            const audio = document.getElementById("background-audio");
+            const source = document.getElementById("audio-source");
+            source.src = audios[audioIndex]; // Atualiza a fonte do áudio
+            audio.load(); // Recarrega o elemento de áudio
+            audio.play(); // Toca o novo áudio
+        }
+
+        // Lista de imagens com IDs e caminhos
+        const images = [
+            { id: 'img1', src: 'img/img1.jpg' },
+            { id: 'img2', src: 'img/img2.jpg' },
+            { id: 'img3', src: 'img/img3.jpg' },
+            { id: 'img4', src: 'img/img4.jpg' },
+            { id: 'img5', src: 'img/img5.jpg' },
+            { id: 'img6', src: 'img/img6.jpg' },
+            { id: 'img7', src: 'img/img7.jpg' },
+            { id: 'img8', src: 'img/img8.jpg' }
+        ];
+
+        let cards = []; // Lista de cartas embaralhadas
+        let selectedCard = null; // Carta atualmente selecionada
+        let timeLeft = 60; // Tempo inicial
+        let timerInterval; // Referência para o intervalo do temporizador
+        let score = 0; // Pontuação inicial
+
+        // Função que embaralha um array
+        function shuffle(array) {
+            return array.sort(() => Math.random() - 0.5);
+        }
+
+        // Função que cria o tabuleiro do jogo
+        function createBoard() {
+            const board = document.getElementById("gameBoard");
+            board.innerHTML = ""; // Limpa o tabuleiro anterior
+
+            const primary = shuffle([...images]);
+            const choices = shuffle([...images]);
+
+            cards = [...primary.slice(0, 1), ...choices.slice(0, 4)]; // 1 imagem alvo e 4 opções
+            cards = shuffle(cards); // Embaralha as cartas
+
+            // Cria os elementos das cartas
+            cards.forEach((imgObj) => {
+                const card = document.createElement("div");
+                card.classList.add("card");
+                card.dataset.id = imgObj.id; // Define o ID da carta
+
+                const frontImage = document.createElement("img");
+                frontImage.src = imgObj.src; // Define a imagem da carta
+                card.appendChild(frontImage);
+
+                card.addEventListener("click", () => flipCard(card)); // Adiciona evento de clique
+                board.appendChild(card); // Adiciona a carta ao tabuleiro
+            });
+
+            updateScore(); // Atualiza a pontuação
+            startTimer(); // Inicia o temporizador
+        }
+
+        // Função que trata a lógica de virar cartas
+        function flipCard(card) {
+            if (!card || card.classList.contains("hidden")) return; // Ignora se a carta já estiver oculta
+
+            if (!selectedCard) {
+                selectedCard = card; // Define a carta selecionada
+                card.style.border = "2px solid green"; // Destaque visual
+            } else {
+                if (selectedCard.dataset.id === card.dataset.id) {
+                    // Se for o par correto, oculta ambas
+                    selectedCard.classList.add("hidden");
+                    card.classList.add("hidden");
+                    score += 10; // Ganha pontos
+                    updateScore();
+                    alert("Parabéns! Você encontrou o par.");
+                    salvarHistorico();
+                } else {
+                    // Se não for o par
+                    score -= 2; // Perde pontos
+                    updateScore();
+                    alert("Não é o par correspondente. Tente novamente.");
+                }
+                selectedCard.style.border = "none"; // Remove o destaque
+                selectedCard = null; // Reseta seleção
+            }
+        }
+
+        // Atualiza a exibição da pontuação
+        function updateScore() {
+            document.getElementById("score").textContent = score;
+        }
+
+        // Inicia o temporizador
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                if (timeLeft > 0) {
+                    timeLeft--; // Diminui o tempo
+                    document.getElementById("timer").textContent = timeLeft;
+                } else {
+                    // Quando o tempo acaba
+                    clearInterval(timerInterval);
+                    alert("Tempo esgotado! Tente novamente.");
+                    salvarHistorico(false); // Registra derrota
+                    location.reload(); // Recarrega o jogo
+                }
+            }, 1000);
+        }
+
+        // Função para salvar o histórico no servidor
+        function salvarHistorico(vitoria = true) {
+            fetch('/historico', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tempoRestante: timeLeft,
+                    pontuacao: score,
+                    resultado: vitoria ? 'Vitória' : 'Derrota'
+                })
+            })
+            .then(res => res.text())
+            .then(msg => console.log(msg)); // Exibe resposta do servidor no console
+        }
+
+        // Quando a página estiver carregada, inicia o jogo
+        document.addEventListener("DOMContentLoaded", createBoard);
+    </script>
+</body>
+</html>
