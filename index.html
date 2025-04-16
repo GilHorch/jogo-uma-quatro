@@ -95,7 +95,7 @@
         ];
 
         // Variáveis globais de controle
-        let remainingImages = [...images]; // Cópia das imagens restantes
+        let remainingImages = [...images,...images]; // Cópia das imagens restantes
         let timeLeft = 60; // Tempo inicial do jogo
         let score = 0; // Pontuação inicial
         let timerInterval; // Intervalo do cronômetro
